@@ -42,12 +42,13 @@ types such as `QString`, `bool`, `int`, `float`, etc.
 Register your service with:
 
 ```c++
-rpc_server->registerServices(std::make_unique<ExampleService>());
+rpc_server->registerServices({ new ExampleService() });
 ```
 
-The server will take over ownership of the `unique_ptr`, and the memory will be
-freed at shutdown. You can pass as many services as you want as arguments to the
-`registerServices` method.
+The server will take over ownership of the service object, and the memory will
+be freed at shutdown. Note that the `registerServices` method changed its
+signature 2016-10-20, from being a variadic template expecting `unique_ptrs`, to
+taking a `QObjectList`.
 
 Finally, start listening for client connections by:
 
@@ -74,11 +75,12 @@ long as a non-null parent `QObject` is provided.)
 ### Invoking a Remote Method Asynchronously
 
 ```c++
-jcon::JsonRpcRequestPtr req = rpc_client->callAsync("getRandomInt", 10);
+auto req = rpc_client->callAsync("getRandomInt", 10);
 ```
 
-The returned `JsonRpcRequestPtr` can be used to set up a callback that is
-invoked when the result of the JSON RPC call is ready:
+The returned object (of type `std::shared_ptr<JsonRpcRequest>`) can be used to
+set up a callback, that is invoked when the result of the JSON RPC call is
+ready:
 
 ```c++
 req->connect(req.get(), &jcon::JsonRpcRequest::result,
@@ -102,10 +104,10 @@ req->connect(req.get(), &jcon::JsonRpcRequest::error,
 ### Invoking a Remote Method Synchronously
 
 ```c++
-jcon::JsonRpcResult result = rpc_client->call("getRandomInt", 10);
+auto result = rpc_client->call("getRandomInt", 10);
 
-if (result.isSuccess()) {
-    QVariant res = result.result();
+if (result->isSuccess()) {
+    QVariant res = result->result();
 } else {
     jcon::JsonRpcError error = rpc_client->lastError();
     QString err_str = error.toString();
@@ -121,7 +123,6 @@ single argument), use `callExpandArgs` and `callAsyncExpandArgs`.
 
 ## Known Issues
 
-* Error handling needs to be improved
 * Does not yet support batch requests/responses
 
 
